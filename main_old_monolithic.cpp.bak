@@ -1,0 +1,338 @@
+#include <Audio.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
+#include <SerialFlash.h>
+#include <Bounce.h>
+
+
+// --- PIN SETTINGS ---
+const int buttonPin1 = 23;  // Digital Pins for Buttons
+const int buttonPin2 = 22;
+const int buttonPin3 = 21;     
+const int buttonPin4 = 20;
+const int buttonPin5 = 19;
+const int buttonPin6 = 18;  
+const int buttonPin7 = 17;
+const int buttonPin8 = 16;
+
+const int buttonPin9 = 9;  
+const int buttonPin10 = 8;
+const int buttonPin11 = 7;
+const int buttonPin12 = 6;  
+const int buttonPin13 = 5;
+const int buttonPin14 = 4;
+const int buttonPin15 = 3;  
+const int buttonPin16 = 2; 
+ 
+const int potPin1    = 24;  // Pins for potentiometer input
+const int potPin2    = 25;
+const int potPin3    = 26;    
+const int potPin4    = 27;
+
+const int potPin5    = 41;
+const int potPin6    = 40; 
+const int potPin7    = 39;
+const int potPin8    = 38;
+
+const int midiChannel = 1;   // MIDI channel (1-16)
+
+// --- SEQUENCER SETTINGS ---
+const int numSteps = 16;
+const int stepNote = 36;  // C1 - typical kick drum note
+const int noteVelocity = 100;
+const int noteLength = 50;  // Note length in milliseconds
+const int ledPin = 13;       // Onboard LED pin
+
+// --- SEQUENCER STATE ---
+bool stepStates[16] = {false};  // Which steps are active
+int currentStep = 0;             // Current playback position (0-15)
+unsigned long lastStepTime = 0;  // Timing for step advance
+float bpm = 120.0;               // Current tempo
+unsigned long stepInterval = 0;  // Calculated from BPM (ms per step)
+bool noteIsPlaying = false;      // Track if note needs to be turned off
+unsigned long noteOffTime = 0;   // When to send note off
+
+// --- MIDI CLOCK STATE ---
+// MIDI clock sends 24 pulses per quarter note (24 PPQN)
+// Since we have 4 steps per quarter note, that's 6 clock pulses per step
+unsigned long lastClockTime = 0;
+unsigned long clockInterval = 0;  // Calculated from BPM (ms per clock pulse)
+const int clockPulsesPerStep = 6; // 24 PPQN / 4 steps per quarter = 6
+int clockPulseCount = 0;          // Track clock pulses within current step
+
+// --- BUTTON STATE TRACKING ---
+int lastButtonState1 = HIGH;  // assume pullup
+int lastButtonState2 = HIGH;
+int lastButtonState3 = HIGH;
+int lastButtonState4 = HIGH;
+int lastButtonState5 = HIGH;
+int lastButtonState6 = HIGH;
+int lastButtonState7 = HIGH;
+int lastButtonState8 = HIGH;
+int lastButtonState9 = HIGH;
+int lastButtonState10 = HIGH;
+int lastButtonState11 = HIGH;
+int lastButtonState12 = HIGH;
+int lastButtonState13 = HIGH;
+int lastButtonState14 = HIGH;
+int lastButtonState15 = HIGH;
+int lastButtonState16 = HIGH;
+
+int lastBPMValue = -1;  // For tempo potentiometer
+
+void CheckHardware(){
+
+  // --- Handle Button 1 as Step Toggle ---
+  int buttonState1 = digitalRead(buttonPin1);
+  if (buttonState1 != lastButtonState1) {
+    if (buttonState1 == LOW) {
+      stepStates[0] = !stepStates[0];  // Toggle step 1
+    }
+    lastButtonState1 = buttonState1;
+  }
+
+  // --- Handle Button 2 as Step Toggle ---
+  int buttonState2 = digitalRead(buttonPin2);
+  if (buttonState2 != lastButtonState2) {
+    if (buttonState2 == LOW) {
+      stepStates[1] = !stepStates[1];  // Toggle step 2
+    }
+    lastButtonState2 = buttonState2;
+  }
+
+  // --- Handle Button 3 as Step Toggle ---
+  int buttonState3 = digitalRead(buttonPin3);
+  if (buttonState3 != lastButtonState3) {
+    if (buttonState3 == LOW) {
+      stepStates[2] = !stepStates[2];  // Toggle step 3
+    }
+    lastButtonState3 = buttonState3;
+  }
+
+  // --- Handle Button 4 as Step Toggle ---
+  int buttonState4 = digitalRead(buttonPin4);
+  if (buttonState4 != lastButtonState4) {
+    if (buttonState4 == LOW) {
+      stepStates[3] = !stepStates[3];  // Toggle step 4
+    }
+    lastButtonState4 = buttonState4;
+  }
+
+  // --- Handle Button 5 as Step Toggle ---
+  int buttonState5 = digitalRead(buttonPin5);
+  if (buttonState5 != lastButtonState5) {
+    if (buttonState5 == LOW) {
+      stepStates[4] = !stepStates[4];  // Toggle step 5
+    }
+    lastButtonState5 = buttonState5;
+  }
+
+  // --- Handle Button 6 as Step Toggle ---
+  int buttonState6 = digitalRead(buttonPin6);
+  if (buttonState6 != lastButtonState6) {
+    if (buttonState6 == LOW) {
+      stepStates[5] = !stepStates[5];  // Toggle step 6
+    }
+    lastButtonState6 = buttonState6;
+  }
+
+  // --- Handle Button 7 as Step Toggle ---
+  int buttonState7 = digitalRead(buttonPin7);
+  if (buttonState7 != lastButtonState7) {
+    if (buttonState7 == LOW) {
+      stepStates[6] = !stepStates[6];  // Toggle step 7
+    }
+    lastButtonState7 = buttonState7;
+  }
+
+  // --- Handle Button 8 as Step Toggle ---
+  int buttonState8 = digitalRead(buttonPin8);
+  if (buttonState8 != lastButtonState8) {
+    if (buttonState8 == LOW) {
+      stepStates[7] = !stepStates[7];  // Toggle step 8
+    }
+    lastButtonState8 = buttonState8;
+  }
+
+  // --- Handle Button 9 as Step Toggle ---
+  int buttonState9 = digitalRead(buttonPin9);
+  if (buttonState9 != lastButtonState9) {
+    if (buttonState9 == LOW) {
+      stepStates[8] = !stepStates[8];  // Toggle step 9
+    }
+    lastButtonState9 = buttonState9;
+  }
+
+  // --- Handle Button 10 as Step Toggle ---
+  int buttonState10 = digitalRead(buttonPin10);
+  if (buttonState10 != lastButtonState10) {
+    if (buttonState10 == LOW) {
+      stepStates[9] = !stepStates[9];  // Toggle step 10
+    }
+    lastButtonState10 = buttonState10;
+  }
+
+  // --- Handle Button 11 as Step Toggle ---
+  int buttonState11 = digitalRead(buttonPin11);
+  if (buttonState11 != lastButtonState11) {
+    if (buttonState11 == LOW) {
+      stepStates[10] = !stepStates[10];  // Toggle step 11
+    }
+    lastButtonState11 = buttonState11;
+  }
+
+  // --- Handle Button 12 as Step Toggle ---
+  int buttonState12 = digitalRead(buttonPin12);
+  if (buttonState12 != lastButtonState12) {
+    if (buttonState12 == LOW) {
+      stepStates[11] = !stepStates[11];  // Toggle step 12
+    }
+    lastButtonState12 = buttonState12;
+  }
+
+  // --- Handle Button 13 as Step Toggle ---
+  int buttonState13 = digitalRead(buttonPin13);
+  if (buttonState13 != lastButtonState13) {
+    if (buttonState13 == LOW) {
+      stepStates[12] = !stepStates[12];  // Toggle step 13
+    }
+    lastButtonState13 = buttonState13;
+  }
+
+  // --- Handle Button 14 as Step Toggle ---
+  int buttonState14 = digitalRead(buttonPin14);
+  if (buttonState14 != lastButtonState14) {
+    if (buttonState14 == LOW) {
+      stepStates[13] = !stepStates[13];  // Toggle step 14
+    }
+    lastButtonState14 = buttonState14;
+  }
+
+  // --- Handle Button 15 as Step Toggle ---
+  int buttonState15 = digitalRead(buttonPin15);
+  if (buttonState15 != lastButtonState15) {
+    if (buttonState15 == LOW) {
+      stepStates[14] = !stepStates[14];  // Toggle step 15
+    }
+    lastButtonState15 = buttonState15;
+  }
+
+  // --- Handle Button 16 as Step Toggle ---
+  int buttonState16 = digitalRead(buttonPin16);
+  if (buttonState16 != lastButtonState16) {
+    if (buttonState16 == LOW) {
+      stepStates[15] = !stepStates[15];  // Toggle step 16
+    }
+    lastButtonState16 = buttonState16;
+  }
+
+  // --- Handle Potentiometer 1 as BPM Control ---
+  int potValue1 = analogRead(potPin1) / 8; // Scale 0–1023 to 0–127
+  if (abs(potValue1 - lastBPMValue) > 1) {  // Small threshold to avoid jitter
+    // Map 0-127 to 60-240 BPM
+    bpm = 60.0 + (potValue1 * 180.0 / 127.0);
+    // Calculate step interval: (60 seconds / BPM) * 1000 ms * (1 beat / 4 steps)
+    // This gives us 16th notes at the given BPM
+    stepInterval = (unsigned long)((60000.0 / bpm) / 4.0);
+    // Calculate MIDI clock interval: 24 PPQN means 24 pulses per quarter note
+    clockInterval = (unsigned long)((60000.0 / bpm) / 24.0);
+    lastBPMValue = potValue1;
+  }
+
+}
+
+void UpdateSequencer() {
+  unsigned long currentTime = millis();
+
+  // Send MIDI clock pulses
+  if (currentTime - lastClockTime >= clockInterval) {
+    lastClockTime = currentTime;
+    usbMIDI.sendRealTime(usbMIDI.Clock);
+    clockPulseCount++;
+  }
+
+  // Handle note off timing
+  if (noteIsPlaying && (currentTime >= noteOffTime)) {
+    usbMIDI.sendNoteOff(stepNote, 0, midiChannel);
+    noteIsPlaying = false;
+  }
+
+  // Check if it's time to advance to the next step
+  if (currentTime - lastStepTime >= stepInterval) {
+    lastStepTime = currentTime;
+    clockPulseCount = 0;  // Reset clock pulse counter for new step
+
+    // Move to next step (wrap around at 16)
+    currentStep = (currentStep + 1) % numSteps;
+
+    // Blink LED every 4 steps (on the beat)
+    if (currentStep % 4 == 0) {
+      digitalWrite(ledPin, HIGH);
+    } else {
+      digitalWrite(ledPin, LOW);
+    }
+
+    // If this step is active, trigger the note
+    if (stepStates[currentStep]) {
+      usbMIDI.sendNoteOn(stepNote, noteVelocity, midiChannel);
+      noteIsPlaying = true;
+      noteOffTime = currentTime + noteLength;
+    }
+  }
+}
+
+
+void setup() {
+  pinMode(buttonPin1, INPUT_PULLUP); // Button with pullup
+  pinMode(buttonPin2, INPUT_PULLUP);
+  pinMode(buttonPin3, INPUT_PULLUP);
+  pinMode(buttonPin4, INPUT_PULLUP);
+  pinMode(buttonPin5, INPUT_PULLUP);
+  pinMode(buttonPin6, INPUT_PULLUP);
+  pinMode(buttonPin7, INPUT_PULLUP);
+  pinMode(buttonPin8, INPUT_PULLUP);
+  pinMode(buttonPin9, INPUT_PULLUP);
+  pinMode(buttonPin10, INPUT_PULLUP);
+  pinMode(buttonPin11, INPUT_PULLUP);
+  pinMode(buttonPin12, INPUT_PULLUP);
+  pinMode(buttonPin13, INPUT_PULLUP);
+  pinMode(buttonPin14, INPUT_PULLUP);
+  pinMode(buttonPin15, INPUT_PULLUP);
+  pinMode(buttonPin16, INPUT_PULLUP);
+
+  pinMode(potPin1, INPUT);
+  pinMode(potPin2, INPUT);
+  pinMode(potPin3, INPUT);
+  pinMode(potPin4, INPUT);
+  pinMode(potPin5, INPUT);
+  pinMode(potPin6, INPUT);
+  pinMode(potPin7, INPUT);
+  pinMode(potPin8, INPUT);
+
+  pinMode(ledPin, OUTPUT);  // LED output
+  digitalWrite(ledPin, LOW);
+
+  // Initialize sequencer timing
+  stepInterval = (unsigned long)((60000.0 / bpm) / 4.0);
+  clockInterval = (unsigned long)((60000.0 / bpm) / 24.0);
+  lastStepTime = millis();
+  lastClockTime = millis();
+
+  // Send MIDI Start message to sync external devices
+  usbMIDI.sendRealTime(usbMIDI.Start);
+
+}
+
+
+void loop() {
+
+  CheckHardware();
+  UpdateSequencer();
+
+  // --- Keep USB MIDI Running ---
+  while (usbMIDI.read()) {
+
+  }
+
+}
