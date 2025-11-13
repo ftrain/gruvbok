@@ -15,7 +15,18 @@ void DefaultSongs::loadDemoSong(Song& song) {
   // Clear everything first
   song.clear();
 
-  // Get Mode1 (Drum Machine), Pattern 0
+  // ============================================================================
+  // Mode 0: Pattern Sequencer
+  // ============================================================================
+  // Initialize Mode 0 Pattern 0 Track 0 with default sequence:
+  // Slot 0: Pattern 0 (loops pattern 0 forever)
+  Pattern& mode0 = song.getPattern(0, 0);
+  // Pot 0 = 0 maps to pattern 0 (0*32/128 = 0)
+  setEvent(mode0, 0, 0, true, 0, 0, 0, 0);  // Sequence slot 0 -> pattern 0
+
+  // ============================================================================
+  // Mode 1: Drum Machine (Pattern 0)
+  // ============================================================================
   Pattern& drums = song.getPattern(1, 0);
 
   // Track 0: Kick Drum on step 0 (button 1)
@@ -23,6 +34,26 @@ void DefaultSongs::loadDemoSong(Song& song) {
 
   // Track 1: Snare Drum on step 8 (button 9)
   setEvent(drums, 1, 8,  true, 127, 64, 0, 0);
+
+  // ============================================================================
+  // Mode 2: Acid Bass (Pattern 0)
+  // ============================================================================
+  Pattern& acid = song.getPattern(2, 0);
+
+  // Track 0: Simple acid bassline (root notes with slides)
+  // C1 bass pattern with some slides
+
+  // Step 0: Root note (C, no slide)
+  setEvent(acid, 0, 0,  true, 0, 0, 100, 0);        // C1, no accent, long note, no slide
+
+  // Step 4: Fifth (G)
+  setEvent(acid, 0, 4,  true, 53, 64, 80, 0);       // G1, some accent, medium note, no slide
+
+  // Step 8: Octave (C)
+  setEvent(acid, 0, 8,  true, 85, 127, 60, 0);      // C2, full accent, short note, no slide
+
+  // Step 12: Slide back to root
+  setEvent(acid, 0, 12, true, 0, 0, 100, 100);      // C1, no accent, long note, slide
 }
 
 void DefaultSongs::loadTechnoPattern(Song& song) {

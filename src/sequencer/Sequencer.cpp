@@ -1,12 +1,14 @@
 #include "Sequencer.h"
 #include "../modes/Mode0_PatternSequencer.h"
 #include "../modes/Mode1_DrumMachine.h"
+#include "../modes/Mode2_AcidBass.h"
 #include "../core/MIDIEvent.h"
 #include <Arduino.h>
 
 Sequencer::Sequencer(Song* s, Hardware* hw, MIDIScheduler* sched)
   : song(s), hardware(hw), scheduler(sched),
     currentStep(0), currentTrack(0), currentMode(1),  // Mode 1 for drum machine
+    sequencePosition(0),  // Start at beginning of Mode 0 sequence
     bpm(120.0), sendClock(true), isPlaying(false) {
 
   // Initialize all modes to nullptr
@@ -33,7 +35,10 @@ void Sequencer::init() {
   // Mode 1: Drum Machine (channel 2)
   modes[1] = new Mode1_DrumMachine(2);
 
-  // Modes 2-14: Not yet implemented, set to nullptr
+  // Mode 2: Acid Bass (channel 3)
+  modes[2] = new Mode2_AcidBass(3);
+
+  // Modes 3-14: Not yet implemented, set to nullptr
   // You can add more modes here as they're implemented
 
   // Modes no longer need scheduler reference - they're pure functions!
@@ -115,8 +120,9 @@ void Sequencer::advanceStep() {
   // Move to next step
   currentStep = (currentStep + 1) % 16;
 
-  // LED brightness: bright on step 0, very dim on all other steps
+  // When pattern completes (step 0), check Mode 0 sequence
   if (currentStep == 0) {
+    updatePatternFromSequence();
     hardware->setLEDBrightness(255);  // Full brightness on step 0
   } else {
     hardware->setLEDBrightness(5);    // Very dim on all other steps
@@ -260,5 +266,46 @@ void Sequencer::recordEvent(uint8_t buttonIndex, bool state) {
   InputState inputs = hardware->getCurrentState();
   for (uint8_t i = 0; i < 4; i++) {
     event.setPot(i, inputs.sliders[i]);
+  }
+}
+
+void Sequencer::updatePatternFromSequence() {
+  // Mode 0 controls pattern sequencing
+  // Read Mode 0, Pattern 0, Track 0 to get the sequence
+  Pattern& mode0Pattern = song->getPattern(0, 0);
+  Track& sequenceTrack = mode0Pattern.getTrack(0);
+
+  // Read current sequence position
+  const Event& sequenceEvent = sequenceTrack.getEvent(sequencePosition);
+
+  // If this slot has a pattern programmed (switch is on)
+  if (sequenceEvent.getSwitch()) {
+    // Get pattern number from pot 0 (0-127 maps to 0-31)
+    uint8_t patternNumber = (sequenceEvent.getPot(0) * 32) / 128;
+    if (patternNumber > 31) patternNumber = 31;
+
+    // Update all modes (except Mode 0) to use this pattern
+    for (uint8_t i = 1; i < 15; i++) {
+      currentPatterns[i] = patternNumber;
+    }
+
+    // Advance to next sequence position
+    sequencePosition++;
+    if (sequencePosition >= 16) {
+      sequencePosition = 0;  // Loop back to start
+    }
+  } else {
+    // Empty slot - loop back to beginning
+    sequencePosition = 0;
+
+    // Re-read the first slot
+    const Event& firstEvent = sequenceTrack.getEvent(0);
+    if (firstEvent.getSwitch()) {
+      uint8_t patternNumber = (firstEvent.getPot(0) * 32) / 128;
+      if (patternNumber > 31) patternNumber = 31;
+      for (uint8_t i = 1; i < 15; i++) {
+        currentPatterns[i] = patternNumber;
+      }
+    }
   }
 }
