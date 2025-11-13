@@ -26,10 +26,15 @@ class Mode0_PatternSequencer : public Mode {
 public:
   Mode0_PatternSequencer(uint8_t channel) : Mode(channel) {}
 
-  void processEvent(uint8_t trackIndex, const Event& event, unsigned long stepTime) override {
+  void processEvent(uint8_t trackIndex, const Event& event,
+                   unsigned long stepTime, MIDIEventBuffer& output) const override {
     // Mode 0 doesn't generate MIDI directly
     // The Sequencer engine reads events from Mode 0 to control pattern playback
-    // No MIDI scheduling needed here
+    // No MIDI events needed here
+    (void)trackIndex;  // Unused
+    (void)event;       // Unused
+    (void)stepTime;    // Unused
+    (void)output;      // Unused
   }
 
   /**

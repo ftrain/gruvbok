@@ -2,15 +2,21 @@
 #define MIDISCHEDULER_H
 
 #include <stdint.h>
+#include "../core/MIDIEvent.h"
 
 /**
  * MIDIScheduler - Manages scheduled MIDI events with delta timing
  *
- * Provides the Mode API for scheduling MIDI messages:
+ * NEW: Supports bulk scheduling from MIDIEventBuffer for pure functional modes.
+ *
+ * Individual methods (for compatibility):
  * - note(pitch, velocity, delta)
  * - off(pitch, delta)
  * - cc(controller, value, delta)
  * - stopall(delta)
+ *
+ * Bulk method (preferred):
+ * - scheduleAll(MIDIEventBuffer)
  *
  * Events are scheduled relative to the current time + delta offset.
  */
@@ -71,6 +77,14 @@ public:
    * @param delta Delay in milliseconds from current time
    */
   void stopall(uint8_t channel, unsigned long delta = 0);
+
+  /**
+   * Schedule all events from a buffer (PREFERRED METHOD)
+   * Bulk scheduling for pure functional modes
+   * @param buffer MIDIEventBuffer containing events to schedule
+   * @return Number of events successfully scheduled
+   */
+  uint8_t scheduleAll(const MIDIEventBuffer& buffer);
 
   /**
    * Process scheduled events - call this frequently in main loop

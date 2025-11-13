@@ -1,0 +1,19 @@
+# GRUVBOK cpplint configuration
+# Disable some checks that don't apply to Arduino/embedded code
+
+# Line length is set to 100 in clang-format
+linelength=100
+
+# Filters (- means disable, + means enable)
+filter=-build/include_subdir
+filter=-build/c++11
+filter=-readability/todo
+filter=-runtime/references
+filter=-runtime/int
+filter=-whitespace/line_length
+
+# Allow certain naming conventions
+root=src
+
+# Disable copyright checks for now
+filter=-legal/copyright

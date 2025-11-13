@@ -34,7 +34,7 @@ private:
 public:
   Event() : data(0) {}
 
-  Event(bool sw, uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3) {
+  Event(bool sw, uint8_t p0, uint8_t p1, uint8_t p2, uint8_t p3) : data(0) {
     setSwitch(sw);
     setPot(0, p0);
     setPot(1, p1);

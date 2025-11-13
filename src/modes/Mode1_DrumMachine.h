@@ -45,7 +45,8 @@ private:
 public:
   Mode1_DrumMachine(uint8_t channel) : Mode(channel) {}
 
-  void processEvent(uint8_t trackIndex, const Event& event, unsigned long stepTime) override {
+  void processEvent(uint8_t trackIndex, const Event& event,
+                   unsigned long stepTime, MIDIEventBuffer& output) const override {
     if (trackIndex >= 8) return;
 
     // Only process if switch is active
@@ -63,32 +64,36 @@ public:
     if (velocity == 0) velocity = 100;
 
     // Map length value (0-127) to note duration (10ms - 2000ms)
-    unsigned long noteLength = 10 + (lengthValue * 1990) / 127;
+    // Cast to unsigned long to prevent overflow before division
+    unsigned long noteLength = 10 + ((unsigned long)lengthValue * 1990) / 127;
 
     // Flam: Send a quieter note slightly before main note (if flam > 0)
     if (flamAmount > 0) {
       // Flam time: 5-50ms delay based on flamAmount
-      unsigned long flamDelay = 5 + (flamAmount * 45) / 127;
+      unsigned long flamDelay = 5 + ((unsigned long)flamAmount * 45) / 127;
       // Flam is quieter (60% of velocity)
       uint8_t flamVelocity = (velocity * 60) / 100;
 
-      // Send flam note immediately
-      scheduler->note(midiChannel, note, flamVelocity, 0);
-      scheduler->off(midiChannel, note, noteLength / 3);  // Shorter flam note
+      // Generate flam note (immediately)
+      output.noteOn(midiChannel, note, flamVelocity, 0);
+      output.noteOff(midiChannel, note, noteLength / 3);  // Shorter flam note
 
-      // Send main note after flam delay
-      scheduler->note(midiChannel, note, velocity, flamDelay);
-      scheduler->off(midiChannel, note, flamDelay + noteLength);
+      // Generate main note (after flam delay)
+      output.noteOn(midiChannel, note, velocity, flamDelay);
+      output.noteOff(midiChannel, note, flamDelay + noteLength);
     } else {
-      // No flam, just send regular note
-      scheduler->note(midiChannel, note, velocity, 0);
-      scheduler->off(midiChannel, note, noteLength);
+      // No flam, just generate regular note
+      output.noteOn(midiChannel, note, velocity, 0);
+      output.noteOff(midiChannel, note, noteLength);
     }
 
-    // Pan: Send CC10 if pan is set
+    // Pan: Generate CC10 if pan is set
     if (pan > 0) {
-      scheduler->cc(midiChannel, 10, pan, 0);  // CC10 = Pan
+      output.cc(midiChannel, 10, pan, 0);  // CC10 = Pan
     }
+
+    // Unused parameter
+    (void)stepTime;
   }
 
   const char* getName() const override {
