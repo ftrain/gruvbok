@@ -1,6 +1,7 @@
 #include "Sequencer.h"
 #include "../modes/Mode0_PatternSequencer.h"
 #include "../modes/Mode1_DrumMachine.h"
+#include "../core/MIDIEvent.h"
 #include <Arduino.h>
 
 Sequencer::Sequencer(Song* s, Hardware* hw, MIDIScheduler* sched)
@@ -35,12 +36,8 @@ void Sequencer::init() {
   // Modes 2-14: Not yet implemented, set to nullptr
   // You can add more modes here as they're implemented
 
-  // Initialize all modes with scheduler reference
-  for (uint8_t i = 0; i < 15; i++) {
-    if (modes[i] != nullptr) {
-      modes[i]->init(scheduler);
-    }
-  }
+  // Modes no longer need scheduler reference - they're pure functions!
+  // They return MIDIEvents which we schedule in bulk
 
   // Calculate timing intervals
   calculateIntervals();
@@ -129,6 +126,13 @@ void Sequencer::advanceStep() {
 void Sequencer::processStep() {
   unsigned long stepTime = millis();
 
+  // Create event buffer for collecting MIDI events from all modes
+  MIDIEventBuffer eventBuffer;
+
+  // PURE FUNCTIONAL DESIGN:
+  // 1. Collect events from all modes (pure functions, no side effects)
+  // 2. Schedule all events in bulk (single point of I/O)
+
   // Process all active modes
   for (uint8_t modeIndex = 0; modeIndex < 15; modeIndex++) {
     if (modes[modeIndex] == nullptr) continue;
@@ -140,11 +144,22 @@ void Sequencer::processStep() {
     // Process all tracks in this pattern
     for (uint8_t trackIndex = 0; trackIndex < Pattern::getNumTracks(); trackIndex++) {
       Track& track = pattern.getTrack(trackIndex);
-      Event& event = track.getEvent(currentStep);
+      const Event& event = track.getEvent(currentStep);
 
-      // Let the mode process this event
-      modes[modeIndex]->processEvent(trackIndex, event, stepTime);
+      // Let the mode generate MIDI events (pure function!)
+      modes[modeIndex]->processEvent(trackIndex, event, stepTime, eventBuffer);
+
+      // If buffer is getting full, schedule events now and clear
+      if (eventBuffer.remaining() < 8) {
+        scheduler->scheduleAll(eventBuffer);
+        eventBuffer.clear();
+      }
     }
+  }
+
+  // Schedule any remaining events
+  if (!eventBuffer.isEmpty()) {
+    scheduler->scheduleAll(eventBuffer);
   }
 }
 

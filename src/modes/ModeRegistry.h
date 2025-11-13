@@ -105,14 +105,13 @@ public:
   }
 
   /**
-   * Initialize all registered modes with scheduler
-   *
-   * @param scheduler MIDI scheduler instance
+   * Activate all registered modes
+   * Calls onActivate() lifecycle hook for each mode
    */
-  void initAll(MIDIScheduler* scheduler) {
+  void activateAll() {
     for (uint8_t i = 0; i < MAX_MODES; i++) {
       if (modes[i] != nullptr) {
-        modes[i]->init(scheduler);
+        modes[i]->onActivate();
       }
     }
   }
