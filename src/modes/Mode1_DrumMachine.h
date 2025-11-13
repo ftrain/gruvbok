@@ -63,12 +63,13 @@ public:
     if (velocity == 0) velocity = 100;
 
     // Map length value (0-127) to note duration (10ms - 2000ms)
-    unsigned long noteLength = 10 + (lengthValue * 1990) / 127;
+    // Cast to unsigned long to prevent overflow before division
+    unsigned long noteLength = 10 + ((unsigned long)lengthValue * 1990) / 127;
 
     // Flam: Send a quieter note slightly before main note (if flam > 0)
     if (flamAmount > 0) {
       // Flam time: 5-50ms delay based on flamAmount
-      unsigned long flamDelay = 5 + (flamAmount * 45) / 127;
+      unsigned long flamDelay = 5 + ((unsigned long)flamAmount * 45) / 127;
       // Flam is quieter (60% of velocity)
       uint8_t flamVelocity = (velocity * 60) / 100;
 

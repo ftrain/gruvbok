@@ -2,18 +2,27 @@
 #include <Arduino.h>
 
 void MIDIScheduler::note(uint8_t channel, uint8_t pitch, uint8_t velocity, unsigned long delta) {
+  // Validate MIDI channel (1-16)
+  if (channel == 0 || channel > 16) return;
+  // pitch and velocity are already 0-127 due to uint8_t range
   scheduleEvent(ScheduledEvent::NOTE_ON, channel, pitch, velocity, delta);
 }
 
 void MIDIScheduler::off(uint8_t channel, uint8_t pitch, unsigned long delta) {
+  // Validate MIDI channel (1-16)
+  if (channel == 0 || channel > 16) return;
   scheduleEvent(ScheduledEvent::NOTE_OFF, channel, pitch, 0, delta);
 }
 
 void MIDIScheduler::cc(uint8_t channel, uint8_t controller, uint8_t value, unsigned long delta) {
+  // Validate MIDI channel (1-16)
+  if (channel == 0 || channel > 16) return;
   scheduleEvent(ScheduledEvent::CC, channel, controller, value, delta);
 }
 
 void MIDIScheduler::stopall(uint8_t channel, unsigned long delta) {
+  // Validate MIDI channel (1-16)
+  if (channel == 0 || channel > 16) return;
   scheduleEvent(ScheduledEvent::STOP_ALL, channel, 0, 0, delta);
 }
 
