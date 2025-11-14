@@ -2,6 +2,7 @@
 #include "../modes/Mode0_PatternSequencer.h"
 #include "../modes/Mode1_DrumMachine.h"
 #include "../modes/Mode2_AcidBass.h"
+#include "../modes/Mode3_EuclideanFade.h"
 #include "../core/MIDIEvent.h"
 #include <Arduino.h>
 
@@ -38,7 +39,10 @@ void Sequencer::init() {
   // Mode 2: Acid Bass (channel 3)
   modes[2] = new Mode2_AcidBass(3);
 
-  // Modes 3-14: Not yet implemented, set to nullptr
+  // Mode 3: Euclidean Fade (channel 4)
+  modes[3] = new Mode3_EuclideanFade(4);
+
+  // Modes 4-14: Not yet implemented, set to nullptr
   // You can add more modes here as they're implemented
 
   // Modes no longer need scheduler reference - they're pure functions!
@@ -120,12 +124,31 @@ void Sequencer::advanceStep() {
   // Move to next step
   currentStep = (currentStep + 1) % 16;
 
-  // When pattern completes (step 0), check Mode 0 sequence
+  // Update LED brightness based on musical position
+  // Only blink if there's an active note at this step
   if (currentStep == 0) {
     updatePatternFromSequence();
-    hardware->setLEDBrightness(255);  // Full brightness on step 0
+  }
+
+  // Check if current step has an active note
+  Pattern& pattern = song->getPattern(currentMode, currentPatterns[currentMode]);
+  Track& track = pattern.getTrack(currentTrack);
+  const Event& event = track.getEvent(currentStep);
+
+  if (event.getSwitch()) {
+    // Step 0 (downbeat): BRIGHT
+    // Steps 4, 8, 12 (quarter notes): MEDIUM
+    // All other steps: SOFT
+    if (currentStep == 0) {
+      hardware->setLEDBrightness(GRUVBOK::LED::DOWNBEAT_BRIGHTNESS);
+    } else if (currentStep == 4 || currentStep == 8 || currentStep == 12) {
+      hardware->setLEDBrightness(GRUVBOK::LED::BEAT_BRIGHTNESS);
+    } else {
+      hardware->setLEDBrightness(GRUVBOK::LED::OFFBEAT_BRIGHTNESS);
+    }
   } else {
-    hardware->setLEDBrightness(5);    // Very dim on all other steps
+    // No active note - LED off
+    hardware->setLEDBrightness(0);
   }
 }
 

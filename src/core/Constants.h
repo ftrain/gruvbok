@@ -1,6 +1,7 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <cstddef>
 #include <stdint.h>
 
 /**
@@ -154,8 +155,9 @@ namespace Debug {
 }
 
 namespace LED {
-  static constexpr uint8_t STEP_0_BRIGHTNESS = 255;   // Full on step 0
-  static constexpr uint8_t OTHER_STEP_BRIGHTNESS = 5;  // Dim on other steps
+  static constexpr uint8_t DOWNBEAT_BRIGHTNESS = 255;  // Bright on step 0 (downbeat)
+  static constexpr uint8_t BEAT_BRIGHTNESS = 50;       // Medium on steps 4, 8, 12 (quarter notes)
+  static constexpr uint8_t OFFBEAT_BRIGHTNESS = 5;     // Soft on all other steps
 }
 
 // ============================================================================

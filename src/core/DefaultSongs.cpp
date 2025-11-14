@@ -38,22 +38,8 @@ void DefaultSongs::loadDemoSong(Song& song) {
   // ============================================================================
   // Mode 2: Acid Bass (Pattern 0)
   // ============================================================================
-  Pattern& acid = song.getPattern(2, 0);
-
-  // Track 0: Simple acid bassline (root notes with slides)
-  // C1 bass pattern with some slides
-
-  // Step 0: Root note (C, no slide)
-  setEvent(acid, 0, 0,  true, 0, 0, 100, 0);        // C1, no accent, long note, no slide
-
-  // Step 4: Fifth (G)
-  setEvent(acid, 0, 4,  true, 53, 64, 80, 0);       // G1, some accent, medium note, no slide
-
-  // Step 8: Octave (C)
-  setEvent(acid, 0, 8,  true, 85, 127, 60, 0);      // C2, full accent, short note, no slide
-
-  // Step 12: Slide back to root
-  setEvent(acid, 0, 12, true, 0, 0, 100, 100);      // C1, no accent, long note, slide
+  // Pattern 0 starts completely empty - blank canvas for acid programming
+  // (No need to set anything - song.clear() already set all switches to off)
 }
 
 void DefaultSongs::loadTechnoPattern(Song& song) {
