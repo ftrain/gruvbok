@@ -15,7 +15,18 @@ void DefaultSongs::loadDemoSong(Song& song) {
   // Clear everything first
   song.clear();
 
-  // Get Mode1 (Drum Machine), Pattern 0
+  // ============================================================================
+  // Mode 0: Pattern Sequencer
+  // ============================================================================
+  // Initialize Mode 0 Pattern 0 Track 0 with default sequence:
+  // Slot 0: Pattern 0 (loops pattern 0 forever)
+  Pattern& mode0 = song.getPattern(0, 0);
+  // Pot 0 = 0 maps to pattern 0 (0*32/128 = 0)
+  setEvent(mode0, 0, 0, true, 0, 0, 0, 0);  // Sequence slot 0 -> pattern 0
+
+  // ============================================================================
+  // Mode 1: Drum Machine (Pattern 0)
+  // ============================================================================
   Pattern& drums = song.getPattern(1, 0);
 
   // Track 0: Kick Drum on step 0 (button 1)
@@ -23,6 +34,12 @@ void DefaultSongs::loadDemoSong(Song& song) {
 
   // Track 1: Snare Drum on step 8 (button 9)
   setEvent(drums, 1, 8,  true, 127, 64, 0, 0);
+
+  // ============================================================================
+  // Mode 2: Acid Bass (Pattern 0)
+  // ============================================================================
+  // Pattern 0 starts completely empty - blank canvas for acid programming
+  // (No need to set anything - song.clear() already set all switches to off)
 }
 
 void DefaultSongs::loadTechnoPattern(Song& song) {

@@ -1,0 +1,68 @@
+# GRUVBOK C++ Code Style Configuration
+# Based on Google style with modifications for embedded systems
+
+---
+Language: Cpp
+BasedOnStyle: Google
+
+# Indentation
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+ColumnLimit: 100
+
+# Braces
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Spacing
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatements
+SpacesInAngles: false
+SpacesInContainerLiterals: false
+SpacesInSquareBrackets: false
+
+# Alignment
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: true
+AlignTrailingComments: true
+
+# Includes
+SortIncludes: true
+IncludeBlocks: Regroup
+
+# Pointers and References
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+# Comments
+ReflowComments: true
+SpacesBeforeTrailingComments: 2
+
+# Classes
+AccessModifierOffset: -1
+ConstructorInitializerIndentWidth: 4
+
+# Namespaces
+CompactNamespaces: false
+FixNamespaceComments: true
+
+# Functions
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: false
+
+# Breaking
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+
+# Other
+Cpp11BracedListStyle: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+Standard: c++11

@@ -36,6 +36,7 @@ private:
   uint8_t currentStep;           // Current step (0-15)
   uint8_t currentTrack;          // Currently selected track for editing (0-7)
   uint8_t currentMode;           // Currently selected mode for editing (0-14)
+  uint8_t sequencePosition;      // Current position in Mode 0 pattern sequence (0-15)
 
   // Timing
   float bpm;                     // Current tempo
@@ -150,6 +151,12 @@ private:
    * Record event at current position
    */
   void recordEvent(uint8_t buttonIndex, bool state);
+
+  /**
+   * Read Mode 0 pattern sequence and update current patterns
+   * Called at the start of each pattern (step 0)
+   */
+  void updatePatternFromSequence();
 };
 
 #endif // SEQUENCER_H

@@ -1,11 +1,15 @@
 #include "Sequencer.h"
 #include "../modes/Mode0_PatternSequencer.h"
 #include "../modes/Mode1_DrumMachine.h"
+#include "../modes/Mode2_AcidBass.h"
+#include "../modes/Mode3_EuclideanFade.h"
+#include "../core/MIDIEvent.h"
 #include <Arduino.h>
 
 Sequencer::Sequencer(Song* s, Hardware* hw, MIDIScheduler* sched)
   : song(s), hardware(hw), scheduler(sched),
     currentStep(0), currentTrack(0), currentMode(1),  // Mode 1 for drum machine
+    sequencePosition(0),  // Start at beginning of Mode 0 sequence
     bpm(120.0), sendClock(true), isPlaying(false) {
 
   // Initialize all modes to nullptr
@@ -32,15 +36,17 @@ void Sequencer::init() {
   // Mode 1: Drum Machine (channel 2)
   modes[1] = new Mode1_DrumMachine(2);
 
-  // Modes 2-14: Not yet implemented, set to nullptr
+  // Mode 2: Acid Bass (channel 3)
+  modes[2] = new Mode2_AcidBass(3);
+
+  // Mode 3: Euclidean Fade (channel 4)
+  modes[3] = new Mode3_EuclideanFade(4);
+
+  // Modes 4-14: Not yet implemented, set to nullptr
   // You can add more modes here as they're implemented
 
-  // Initialize all modes with scheduler reference
-  for (uint8_t i = 0; i < 15; i++) {
-    if (modes[i] != nullptr) {
-      modes[i]->init(scheduler);
-    }
-  }
+  // Modes no longer need scheduler reference - they're pure functions!
+  // They return MIDIEvents which we schedule in bulk
 
   // Calculate timing intervals
   calculateIntervals();
@@ -118,16 +124,43 @@ void Sequencer::advanceStep() {
   // Move to next step
   currentStep = (currentStep + 1) % 16;
 
-  // LED brightness: bright on step 0, very dim on all other steps
+  // Update LED brightness based on musical position
+  // Only blink if there's an active note at this step
   if (currentStep == 0) {
-    hardware->setLEDBrightness(255);  // Full brightness on step 0
+    updatePatternFromSequence();
+  }
+
+  // Check if current step has an active note
+  Pattern& pattern = song->getPattern(currentMode, currentPatterns[currentMode]);
+  Track& track = pattern.getTrack(currentTrack);
+  const Event& event = track.getEvent(currentStep);
+
+  if (event.getSwitch()) {
+    // Step 0 (downbeat): BRIGHT
+    // Steps 4, 8, 12 (quarter notes): MEDIUM
+    // All other steps: SOFT
+    if (currentStep == 0) {
+      hardware->setLEDBrightness(GRUVBOK::LED::DOWNBEAT_BRIGHTNESS);
+    } else if (currentStep == 4 || currentStep == 8 || currentStep == 12) {
+      hardware->setLEDBrightness(GRUVBOK::LED::BEAT_BRIGHTNESS);
+    } else {
+      hardware->setLEDBrightness(GRUVBOK::LED::OFFBEAT_BRIGHTNESS);
+    }
   } else {
-    hardware->setLEDBrightness(5);    // Very dim on all other steps
+    // No active note - LED off
+    hardware->setLEDBrightness(0);
   }
 }
 
 void Sequencer::processStep() {
   unsigned long stepTime = millis();
+
+  // Create event buffer for collecting MIDI events from all modes
+  MIDIEventBuffer eventBuffer;
+
+  // PURE FUNCTIONAL DESIGN:
+  // 1. Collect events from all modes (pure functions, no side effects)
+  // 2. Schedule all events in bulk (single point of I/O)
 
   // Process all active modes
   for (uint8_t modeIndex = 0; modeIndex < 15; modeIndex++) {
@@ -140,11 +173,22 @@ void Sequencer::processStep() {
     // Process all tracks in this pattern
     for (uint8_t trackIndex = 0; trackIndex < Pattern::getNumTracks(); trackIndex++) {
       Track& track = pattern.getTrack(trackIndex);
-      Event& event = track.getEvent(currentStep);
+      const Event& event = track.getEvent(currentStep);
 
-      // Let the mode process this event
-      modes[modeIndex]->processEvent(trackIndex, event, stepTime);
+      // Let the mode generate MIDI events (pure function!)
+      modes[modeIndex]->processEvent(trackIndex, event, stepTime, eventBuffer);
+
+      // If buffer is getting full, schedule events now and clear
+      if (eventBuffer.remaining() < 8) {
+        scheduler->scheduleAll(eventBuffer);
+        eventBuffer.clear();
+      }
     }
+  }
+
+  // Schedule any remaining events
+  if (!eventBuffer.isEmpty()) {
+    scheduler->scheduleAll(eventBuffer);
   }
 }
 
@@ -245,5 +289,46 @@ void Sequencer::recordEvent(uint8_t buttonIndex, bool state) {
   InputState inputs = hardware->getCurrentState();
   for (uint8_t i = 0; i < 4; i++) {
     event.setPot(i, inputs.sliders[i]);
+  }
+}
+
+void Sequencer::updatePatternFromSequence() {
+  // Mode 0 controls pattern sequencing
+  // Read Mode 0, Pattern 0, Track 0 to get the sequence
+  Pattern& mode0Pattern = song->getPattern(0, 0);
+  Track& sequenceTrack = mode0Pattern.getTrack(0);
+
+  // Read current sequence position
+  const Event& sequenceEvent = sequenceTrack.getEvent(sequencePosition);
+
+  // If this slot has a pattern programmed (switch is on)
+  if (sequenceEvent.getSwitch()) {
+    // Get pattern number from pot 0 (0-127 maps to 0-31)
+    uint8_t patternNumber = (sequenceEvent.getPot(0) * 32) / 128;
+    if (patternNumber > 31) patternNumber = 31;
+
+    // Update all modes (except Mode 0) to use this pattern
+    for (uint8_t i = 1; i < 15; i++) {
+      currentPatterns[i] = patternNumber;
+    }
+
+    // Advance to next sequence position
+    sequencePosition++;
+    if (sequencePosition >= 16) {
+      sequencePosition = 0;  // Loop back to start
+    }
+  } else {
+    // Empty slot - loop back to beginning
+    sequencePosition = 0;
+
+    // Re-read the first slot
+    const Event& firstEvent = sequenceTrack.getEvent(0);
+    if (firstEvent.getSwitch()) {
+      uint8_t patternNumber = (firstEvent.getPot(0) * 32) / 128;
+      if (patternNumber > 31) patternNumber = 31;
+      for (uint8_t i = 1; i < 15; i++) {
+        currentPatterns[i] = patternNumber;
+      }
+    }
   }
 }
