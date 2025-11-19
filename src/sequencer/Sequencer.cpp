@@ -3,6 +3,8 @@
 #include "../modes/Mode1_DrumMachine.h"
 #include "../modes/Mode2_AcidBass.h"
 #include "../modes/Mode3_EuclideanFade.h"
+#include "../modes/Mode4_MetaArp.h"
+#include "../modes/Mode5_BasslineProgression.h"
 #include "../core/MIDIEvent.h"
 #include <Arduino.h>
 
@@ -42,7 +44,13 @@ void Sequencer::init() {
   // Mode 3: Euclidean Fade (channel 4)
   modes[3] = new Mode3_EuclideanFade(4);
 
-  // Modes 4-14: Not yet implemented, set to nullptr
+  // Mode 4: Meta Arp (channel 5)
+  modes[4] = new Mode4_MetaArp(5);
+
+  // Mode 5: Bassline Progression (channel 6)
+  modes[5] = new Mode5_BasslineProgression(6);
+
+  // Modes 6-14: Not yet implemented, set to nullptr
   // You can add more modes here as they're implemented
 
   // Modes no longer need scheduler reference - they're pure functions!
@@ -244,7 +252,10 @@ void Sequencer::handleInput() {
   if (patternPot >= 0) {
     uint8_t newPattern = (patternPot * 32) / 128;  // Use 128 to prevent overflow to 32
     if (newPattern > 31) newPattern = 31;
-    currentPatterns[currentMode] = newPattern;
+    // Set pattern for ALL modes (global pattern switching)
+    for (uint8_t i = 0; i < 15; i++) {
+      currentPatterns[i] = newPattern;
+    }
     usbMIDI.sendControlChange(2, newPattern, 16);  // Debug CC
   }
 

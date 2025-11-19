@@ -41,6 +41,14 @@ public:
    */
   static void loadEmpty(Song& song);
 
+  /**
+   * Load a full song across patterns 1-12
+   *
+   * Complete arranged song with intro, build, main groove, breakdown, and finale
+   * Patterns 1-12: Full arrangement using drums, bass, and arps
+   */
+  static void loadFullSong(Song& song);
+
 private:
   // Helper: Set event with switch + pots
   static void setEvent(Pattern& pattern, uint8_t track, uint8_t step,
